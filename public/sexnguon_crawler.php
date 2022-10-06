@@ -6,7 +6,7 @@
  * Defines the plugin name, version, and two examples hooks for how to
  * enqueue the public-facing stylesheet and JavaScript.
  */
-class Nguon_Movies_Crawler {
+class SexNguon_Crawler {
     private $plugin_name;
     private $version;
 
@@ -24,16 +24,16 @@ class Nguon_Movies_Crawler {
     /**
      * Register the JavaScript for the public-facing side of the site.
      */
-    public function enqueue_scripts() {
-        wp_enqueue_script( $this->plugin_name . 'mainjs', plugin_dir_url( __FILE__ ) . 'js/main.js', array( 'jquery' ), $this->version, false );
+    public function sexnguon_enqueue_scripts() {
+        wp_enqueue_script( $this->plugin_name . 'sexnguonjs', plugin_dir_url( __FILE__ ) . 'js/sexnguon.js', array( 'jquery' ), $this->version, false );
         wp_enqueue_script( $this->plugin_name . 'bootstrapjs', plugin_dir_url( __FILE__ ) . 'js/bootstrap.bundle.min.js', array(), $this->version, false );
     }
 
     /**
      * Register the stylesheets for the public-facing side of the site.
      */
-    public function enqueue_styles() {
-        wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/style.css', array(), $this->version, 'all' );
+    public function sexnguon_enqueue_styles() {
+        wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/sexnguon.css', array(), $this->version, 'all' );
     }
 
     /**
@@ -52,12 +52,12 @@ class Nguon_Movies_Crawler {
     }
 
     /**
-	 * wp_ajax_nguon_crawler_api action Callback function
+	 * wp_ajax_sexnguon_crawler_api action Callback function
 	 *
 	 * @param  string $api url
 	 * @return json $page_array
 	 */
-    public function nguon_crawler_api()
+    public function sexnguon_crawler_api()
     {
         $url = $_POST['api'];
         $url = strpos($url, '?') === false ? $url .= '?' : $url .= '&';
@@ -73,11 +73,17 @@ class Nguon_Movies_Crawler {
             echo json_encode(['code' => 999, 'message' => 'Mẫu JSON không đúng, không hỗ trợ thu thập']);
             die();
         }
+        $input_dom = '<div class="form-check form-check-inline removeable"><input class="form-check-input mt-0" type="radio" name="type_id" value="{type_id}" id="type_{type_id}"><label class="form-check-label" for="type_{type_id}">{type_name}</label></div>';
+        $html = '';
+        foreach ( $data->class as $type ) {
+            $html .= str_replace(['{type_id}', '{type_name}'], [$type->type_id, $type->type_name], $input_dom);
+        }
         $page_array = array(
             'code'              => 1,
             'last_page'         => $data->pagecount,
-            'per_page'          => $data->limit,
+            'update_today'      => $latest_data->total,
             'total'             => $data->total,
+            'type_list'         => $html,
             'full_list_page'    => range(1, $data->pagecount),
             'latest_list_page'  => range(1, $latest_data->pagecount),
         );
@@ -87,21 +93,25 @@ class Nguon_Movies_Crawler {
     }
 
     /**
-	 * wp_ajax_nguon_get_movies_page action Callback function
+	 * wp_ajax_sexnguon_get_movies_page action Callback function
 	 *
 	 * @param  string $api        url
 	 * @param  string $param      query params
 	 * @return json   $page_array List movies in page
 	 */
-    public function nguon_get_movies_page()
+    public function sexnguon_get_movies_page()
     {
-        try 
-        {
+        try {
             $url = $_POST['api'];
             $params = $_POST['param'];
+            $type_id = $_POST['type_id'];
+            
             $url = strpos($url, '?') === false ? $url .= '?' : $url .= '&';
+            if ( $type_id !== null || $type_id !== '0' ) {
+                $params .= '&t=' . $type_id;
+            }
             $response = $this->curl($url . $params);
-    
+
             $data = json_decode($response);
             if ( !$data ) {
                 echo json_encode(['code' => 999, 'message' => 'Mẫu JSON không đúng, không hỗ trợ thu thập']);
@@ -122,12 +132,12 @@ class Nguon_Movies_Crawler {
     }
 
     /**
-	 * wp_ajax_nguon_crawl_by_id action Callback function
+	 * wp_ajax_sexnguon_crawl_by_id action Callback function
 	 *
 	 * @param  string $api        url
 	 * @param  string $param      movie id
 	 */
-    public function nguon_crawl_by_id()
+    public function sexnguon_crawl_by_id()
     {
         $url = $_POST['api'];
         $params = $_POST['param'];
@@ -147,9 +157,8 @@ class Nguon_Movies_Crawler {
 			'posts_per_page' => 1,
 			'meta_query' => array(
 				array(
-					'key' => '_halim_metabox_options',
-					'value' => $movie_data['org_title'],
-					'compare' => 'LIKE'
+					'key' => '_sexnguon_id',
+					'value' => $movie_data['movie_id'],
 				)
 			)
 		);
@@ -214,7 +223,10 @@ class Nguon_Movies_Crawler {
             $categories = $this->format_text($data['type_name']);
             $tags = [];
             array_push($tags, sanitize_text_field($data['vod_name']));
-            $tags = array_merge($tags, $this->format_text($data['vod_tag']));
+            $tags = array_merge($tags, $this->format_text($data['type_name']));
+
+            $strtime = date_create_from_format('H:i:s', $data['vod_duration']);
+            $runtime = $strtime != FALSE ? $strtime->format('g\hi\ms\s') : '';
     
             $movie_data = [
                 'title' => trim($data['vod_name']),
@@ -222,18 +234,19 @@ class Nguon_Movies_Crawler {
                 'pic_url' => $data['vod_pic'],
                 'actor' => ['Đang cập nhật'],
                 'director' => ['Đang cập nhật'],
-                'episode' => 'HD',
+                'episode' => 'Full',
                 'episodes' => $this->get_play_url($data['vod_play_url'], $data['vod_blurb']),
                 'country' => $data['vod_area'],
-                'language' => $data['vod_lang'],
+                'language' => 'Vietsub',
                 'year' => date('Y'),
-                'content' => '',
+                'content' => trim($data['vod_name']),
                 'tags' => $tags,
-                'quality' => 'Full HD',
+                'quality' => ['Full HD','HD', '1080P', '720P'][random_int(0, 3)],
                 'type' => $type,
                 'categories' => $categories,
-                'duration' => '',
+                'duration' => $runtime,
                 'status' => $status,
+                'movie_id' => $data['vod_id'],
             ];
         }
         return $movie_data;
@@ -313,6 +326,7 @@ class Nguon_Movies_Crawler {
         update_post_meta($post_id, '_halim_metabox_options', $post_meta_movies);
         update_post_meta($post_id, '_halimmovies', json_encode($default_episode, JSON_UNESCAPED_UNICODE));
         update_post_meta($post_id, '_edit_last', 1);
+        add_post_meta($post_id, '_sexnguon_id', $data['movie_id']);
         return $post_id;
     }
 
@@ -326,26 +340,54 @@ class Nguon_Movies_Crawler {
 	 */
     public function save_images($image_url, $post_id, $posttitle, $set_thumb = false)
     {
-        $file = file_get_contents($image_url);
-        $postname = sanitize_title($posttitle);
-        $im_name = "$postname-$post_id.jpg";
-        $res = wp_upload_bits($im_name, '', $file);
-        $dirs = wp_upload_dir();
-        $filetype = wp_check_filetype($res['file']);
-        $attachment = array(
-            'guid' => $dirs['baseurl'] . '/' . _wp_relative_upload_path($res['file']),
-            'post_mime_type' => $filetype['type'],
-            'post_title' => preg_replace('/\.[^.]+$/', '', basename($res['file'])),
-            'post_content' => '',
-            'post_status' => 'inherit'
-        );
-        $attach_id = wp_insert_attachment($attachment, $res['file'], $post_id);
-        $attach_data = wp_generate_attachment_metadata($attach_id, $res['file']);
-        wp_update_attachment_metadata($attach_id, $attach_data);
-        if ($set_thumb != false) {
-            set_post_thumbnail($post_id, $attach_id);
+        require_once( ABSPATH . "/wp-admin/includes/file.php");
+
+        $temp_file = download_url( $image_url, 10 );
+        if ( ! is_wp_error( $temp_file ) ) {
+
+            $mime_extensions = array(
+                'jpg'          => 'image/jpg',
+                'jpeg'         => 'image/jpeg',
+                'gif'          => 'image/gif',
+                'png'          => 'image/png',
+                'webp'         => 'image/webp',
+            );
+
+            // Array based on $_FILE as seen in PHP file uploads.
+            $file = array(
+                'name'     => basename($image_url), // ex: wp-header-logo.png
+                'type'     => $mime_extensions[pathinfo( $image_url, PATHINFO_EXTENSION )],
+                'tmp_name' => $temp_file,
+                'error'    => 0,
+                'size'     => filesize( $temp_file ),
+            );
+        
+            $overrides = array(
+                'test_form' => false,
+                'test_size' => true,
+                'test_upload' => true,
+            );
+        
+            // Move the temporary file into the uploads directory.
+            $results = wp_handle_sideload( $file, $overrides );
+        
+            if ( ! empty( $results['error'] ) ) {
+                // Insert any error handling here.
+            } else {
+                $attachment = array(
+                    'guid' => $results['url'],
+                    'post_mime_type' => $results['type'],
+                    'post_title' => preg_replace('/\.[^.]+$/', '', basename($results['file'])),
+                    'post_content' => '',
+                    'post_status' => 'inherit'
+                );
+                $attach_id = wp_insert_attachment($attachment, $results['file'], $post_id);
+
+                if ( $set_thumb != false ) {
+                    set_post_thumbnail($post_id, $attach_id);
+                }
+            }
         }
-        return $res;
     }
 
     /**
@@ -360,6 +402,7 @@ class Nguon_Movies_Crawler {
         $arr = explode(',', sanitize_text_field($string));
         foreach ($arr as &$item) {
             $item = ucwords(trim($item));
+            $item = mb_strtoupper(mb_substr($item, 0, 1)).mb_substr($item, 1, mb_strlen($item));
         }
         return $arr;
     }
@@ -397,18 +440,17 @@ class Nguon_Movies_Crawler {
 	 */
     private function get_play_url($link_m3u8, $limk_blurd)
     {
-        print
         $server_add = array();
         $episodes = array($link_m3u8, $limk_blurd);
         
         foreach ($episodes as $key => $value) {
 
-            $server_info["halimmovies_server_name"] = strpos($value, 'm3u8') !== false ? 'Server #M3U8' : 'Server #Embed';
+            $server_info["halimmovies_server_name"] = strpos($value, 'm3u8') !== false ? 'VIP #1' : 'Dự Phòng';
             $server_info["halimmovies_server_data"] = array();
 
             $ep_data['halimmovies_ep_name'] = 'Full';
             $ep_data['halimmovies_ep_slug'] = 'full';
-            $ep_data['halimmovies_ep_type'] = strpos($value, 'm3u8') !== false ? 'mp4' : 'embed';
+            $ep_data['halimmovies_ep_type'] = strpos($value, 'm3u8') !== false ? 'link' : 'embed';
             $ep_data['halimmovies_ep_link'] = $value;
             $ep_data['halimmovies_ep_subs'] = [];
             $ep_data['halimmovies_ep_listsv'] = [];

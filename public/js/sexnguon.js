@@ -3,19 +3,20 @@
 
     $(function() {
         // DOM elements
-        const buttonCheckApi        = $("#api-check");
-        const buttonRollCrawl       = $("#roll-crawl");
-        const buttonUpdateCrawl     = $("#update-crawl");
-        const buttonFullCrawl       = $("#full-crawl");
-        const buttonPageFromTo      = $("#page-from-to");
-        const buttonSelectedCrawl   = $("#selected-crawl");
-        const buttonPauseCrawl      = $("#pause-crawl");
-        const buttonResumeCrawl     = $("#resume-crawl");
-        const alertBox              = $("#alert-box");
-        const moviesListDiv         = $("#movies-list");
-        const divCurrentPage        = $("#current-page-crawl");
-        const inputPageFrom         = $("input[name=page-from]");
-        const inputPageTo           = $("input[name=page-to]");
+        const buttonCheckApi        = $("#xnguon-api-check");
+        const buttonRollCrawl       = $("#xnguon-roll-crawl");
+        const buttonUpdateCrawl     = $("#xnguon-update-crawl");
+        const buttonFullCrawl       = $("#xnguon-full-crawl");
+        const buttonPageFromTo      = $("#xnguon-page-from-to");
+        const buttonSelectedCrawl   = $("#xnguon-selected-crawl");
+        const buttonPauseCrawl      = $("#xnguon-pause-crawl");
+        const buttonResumeCrawl     = $("#xnguon-resume-crawl");
+        const buttonOneCrawl        = $("#xnguon-onemovie-crawl");
+        const alertBox              = $("#xnguon-alert-box");
+        const moviesListDiv         = $("#xnguon-movies-list");
+        const divCurrentPage        = $("#xnguon-current-page-crawl");
+        const inputPageFrom         = $("input[name=xnguon-page-from]");
+        const inputPageTo           = $("input[name=xnguon-page-to]");
 
         // Variable
         let latestPageList = [];
@@ -46,14 +47,14 @@
                 alertBox.html("JSON API không thể để trống");
                 return false;
             }
-            $("#movies-table tbody").html('');
+            $("#xnguon-movies-table tbody").html('');
             moviesListDiv.hide();
             $(this).html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>Loading...`);
             $.ajax({
                 type: "POST",
                 url: ajaxurl,
                 data: {
-                    action: "nguon_crawler_api",
+                    action: "sexnguon_crawler_api",
                     api: apiUrl,
                 },
                 success: function (response) {
@@ -75,8 +76,52 @@
                         fullPageList = data.full_list_page
                         maxPageTo = data.last_page;
                         $("#movies-total").html(data.total); $("#last-page").html(data.last_page); $("#per-page").html(data.per_page);
+                        $("#type_list").children('div.removeable').remove();$("#type_list").append(data.type_list);
                     }
                 },
+            });
+        });
+
+        // Crawl one movie
+        buttonOneCrawl.click(function (e) {
+            e.preventDefault();
+            $(this).html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>Loading...`);
+            let oneLink = $("#onemovie-link").val();
+            if (! oneLink ) {
+                alertBox.show();
+                alertBox.removeClass().addClass("alert alert-danger");
+                alertBox.html("Link phim không thể để trống");
+                return false;
+            }
+            oneLink = new URL(oneLink);
+            let pathName = oneLink.pathname;
+            let pattern = /voddetail\/(\d+?)\.html/i;
+            let movie_id = pathName.match(pattern);
+            $.ajax({
+                type: "POST",
+                url: ajaxurl,
+                data: {
+                    action: "sexnguon_crawl_by_id",
+                    api: "https://api.sexnguon.com/api.php/provide/vod/?ac=list",
+                    param: `ac=detail&ids=${movie_id}`,
+                },
+                success: function (response) {
+                    let data = JSON.parse(response);
+                    if (data.code > 1) {
+                        alertBox.show();
+                        alertBox.removeClass().addClass("alert alert-danger");
+                        alertBox.html(data.message);
+                    } else {
+                        alertBox.show();
+                        alertBox.removeClass().addClass("alert alert-success");
+                        alertBox.html(data.message)
+                    }
+                    buttonOneCrawl.html("Thu Thập Ngay");
+                },
+                error: function(xhr, ajaxOptions, thrownError) {
+                    alert("Something went wrong");
+                    buttonOneCrawl.html("Thu Thập Ngay");
+                }
             });
         });
 
@@ -106,7 +151,7 @@
         // Crawl from pageFrom to pageTo
         buttonSelectedCrawl.click(function (e) {
             e.preventDefault();
-            $("#movies-table").show();
+            $("#xnguon-movies-table").show();
             $(this).html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>Loading...`);
             crawl_movies_page(pageFromToList, '');
         });
@@ -114,7 +159,7 @@
         // Update today's movies
         buttonUpdateCrawl.click(function (e) {
             e.preventDefault();
-            $("#movies-table").show();
+            $("#xnguon-movies-table").show();
             $(this).html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>Loading...`);
             crawl_movies_page(latestPageList, 24);
         });
@@ -122,7 +167,7 @@
         // Crawl full movies
         buttonFullCrawl.click(function (e) {
             e.preventDefault();
-            $("#movies-table").show();
+            $("#xnguon-movies-table").show();
             $(this).html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>Loading...`);
             crawl_movies_page(fullPageList, '');
         });
@@ -179,13 +224,14 @@
                 type: "POST",
                 url: ajaxurl,
                 data: {
-                    action: "nguon_get_movies_page",
+                    action: "sexnguon_get_movies_page",
                     api: apiUrl,
                     param: `ac=list&h=${tempHour}&pg=${currentPage}`,
+                    type_id: $("#type_list input[name='type_id']:checked").val(),
                 },
                 beforeSend: function () {
                     divCurrentPage.show();
-                    $("#current-page-crawl h4").html(`Page ${currentPage}`);
+                    $("#xnguon-current-page-crawl h4").html(`Page ${currentPage}`);
                     buttonRollCrawl.prop("disabled", true);
                     buttonSelectedCrawl.prop("disabled", true);
                     buttonUpdateCrawl.prop("disabled", true);
@@ -220,7 +266,7 @@
             tempMoviesId = ids;
             tempMovies = movies;
             if (id == null) {
-                $("#movies-table tbody").html('');
+                $("#xnguon-movies-table tbody").html('');
                 crawl_movies_page(tempPageList, tempHour);
                 return;
             }
@@ -228,7 +274,7 @@
                 type: "POST",
                 url: ajaxurl,
                 data: {
-                    action: "nguon_crawl_by_id",
+                    action: "sexnguon_crawl_by_id",
                     api: apiUrl,
                     param: `ac=detail&ids=${id}`,
                 },
@@ -261,7 +307,7 @@
                     <td>${movie.vod_time}</td>
                     <td><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...</td></tr>`;
             });
-            $("#movies-table tbody").append(trHTML);
+            $("#xnguon-movies-table tbody").append(trHTML);
         };
 
         // Update movie crawling status

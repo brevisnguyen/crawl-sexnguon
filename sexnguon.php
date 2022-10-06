@@ -30,7 +30,7 @@ set_time_limit(0);
  * The code that runs during plugin activation.
  * This action is documented in includes/class-plugin-name-activator.php
  */
-function activate_plugin_name() {
+function activate_sexnguon() {
     // Code
 }
 
@@ -38,33 +38,33 @@ function activate_plugin_name() {
  * The code that runs during plugin deactivation.
  * This action is documented in includes/class-plugin-name-deactivator.php
  */
-function deactivate_plugin_name() {
+function deactivate_sexnguon() {
     // Code
 }
 
-register_activation_hook( __FILE__, 'activate_plugin_name' );
-register_deactivation_hook( __FILE__, 'deactivate_plugin_name' );
+register_activation_hook( __FILE__, 'activate_sexnguon' );
+register_deactivation_hook( __FILE__, 'deactivate_sexnguon' );
 
 /**
  * Provide a public-facing view for the plugin
  */
 function movies_crawler_add_menu() {
     add_menu_page(
-        __('Movies Crawler Tools', 'textdomain'),
-        'Movies Crawler',
+        __('SexNguon Crawler', 'textdomain'),
+        'SexNguon Crawler',
         'manage_options',
-        'movies-crawler-tools',
-        'movies_crawler_page_menu',
+        'sexnguon-crawler-tools',
+        'sexnguon_crawler_page_menu',
         'dashicons-buddicons-replies',
-        2
+        3
     );
 }
 
 /**
  * Include the following files that make up the plugin
  */
-function movies_crawler_page_menu() {
-    require_once plugin_dir_path(__FILE__) . 'public/partials/movies_crawler_view.php';
+function sexnguon_crawler_page_menu() {
+    require_once plugin_dir_path(__FILE__) . 'public/partials/sexnguon_view.php';
 }
 
 /**
@@ -75,16 +75,16 @@ function movies_crawler_page_menu() {
  * not affect the page life cycle.
  * 
  */
-require_once plugin_dir_path( __FILE__ ) . 'public/public-crawler.php';
-function run_plugin_name() {
+require_once plugin_dir_path( __FILE__ ) . 'public/sexnguon_crawler.php';
+function run_sexnguon_crawl() {
     add_action('admin_menu', 'movies_crawler_add_menu');
 
-    $plugin_admin = new Nguon_Movies_Crawler( 'sexnguon-crawler', SEXNGUON_VERSION );
-    add_action('in_admin_header', array($plugin_admin, 'enqueue_scripts'));
-    add_action('in_admin_header', array($plugin_admin, 'enqueue_styles'));
+    $plugin_admin = new SexNguon_Crawler( 'sexnguon-crawler', SEXNGUON_VERSION );
+    add_action('in_admin_header', array($plugin_admin, 'sexnguon_enqueue_scripts'));
+    add_action('in_admin_header', array($plugin_admin, 'sexnguon_enqueue_styles'));
 
-    add_action('wp_ajax_nguon_crawler_api', array($plugin_admin, 'nguon_crawler_api'));
-    add_action('wp_ajax_nguon_get_movies_page', array($plugin_admin, 'nguon_get_movies_page'));
-    add_action('wp_ajax_nguon_crawl_by_id', array($plugin_admin, 'nguon_crawl_by_id'));
+    add_action('wp_ajax_sexnguon_crawler_api', array($plugin_admin, 'sexnguon_crawler_api'));
+    add_action('wp_ajax_sexnguon_get_movies_page', array($plugin_admin, 'sexnguon_get_movies_page'));
+    add_action('wp_ajax_sexnguon_crawl_by_id', array($plugin_admin, 'sexnguon_crawl_by_id'));
 }
-run_plugin_name();
+run_sexnguon_crawl();
